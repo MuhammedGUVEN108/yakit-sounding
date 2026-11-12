@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Yakıt Sounding</title>
+<meta name="description" content="Tank sounding (cm) → hacim, VCF 54B, ton. İnternetsiz çalışır.">
+<meta name="theme-color" content="#0f3b5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sounding">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --ink:#14202b; --mute:#5f6b78; --line:#dfe4ea;
+  --accent:#0f3b5f; --accent-ink:#ffffff; --input:#fff7cc; --input-line:#e8d77a;
+  --ok:#1d7a46; --warn:#b3261e; --warn-bg:#fde8e6; --hfo:#7a4b12; --mgo:#0d5c7a;
+  --bar:#2e7db5; --bar-bg:#e6edf3;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e141a; --card:#17202a; --ink:#e8eef4; --mute:#9aa7b4; --line:#2a3642;
+    --accent:#3d8fd1; --accent-ink:#06121c; --input:#2b2a1a; --input-line:#5c5524;
+    --ok:#5cc98a; --warn:#ff8a80; --warn-bg:#3a1f1d; --hfo:#e0a35a; --mgo:#5ec4e8;
+    --bar:#4aa3e0; --bar-bg:#24303c;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e141a; --card:#17202a; --ink:#e8eef4; --mute:#9aa7b4; --line:#2a3642;
+  --accent:#3d8fd1; --accent-ink:#06121c; --input:#2b2a1a; --input-line:#5c5524;
+  --ok:#5cc98a; --warn:#ff8a80; --warn-bg:#3a1f1d; --hfo:#e0a35a; --mgo:#5ec4e8;
+  --bar:#4aa3e0; --bar-bg:#24303c;
+}
+*{box-sizing:border-box}
+html,body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);
+  font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top) 0 calc(96px + env(safe-area-inset-bottom))}
+header{background:var(--accent);color:var(--accent-ink);padding:14px 16px 12px}
+header h1{margin:0;font-size:20px;letter-spacing:.2px}
+header .sub{opacity:.85;font-size:13px;margin-top:2px}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px}
+.bar-top{display:flex;gap:10px;align-items:center;margin:14px 0 6px;flex-wrap:wrap}
+.trim{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:8px 12px;flex:1;min-width:220px}
+.trim label{font-weight:600}
+.trim small{color:var(--mute)}
+input.num{font:inherit;font-size:17px;width:100%;min-width:0;padding:8px 10px;border-radius:9px;
+  border:1.5px solid var(--input-line);background:var(--input);color:var(--ink);text-align:center;
+  -webkit-appearance:none;appearance:none}
+input.num:focus{outline:2px solid var(--accent);outline-offset:1px}
+.trim input.num{width:84px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--mute);margin:18px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.card.notable{opacity:.92}
+.row1{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.tname{font-weight:700;font-size:16px}
+.grade{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;border:1px solid currentColor}
+.grade.HFO{color:var(--hfo)} .grade.MGO{color:var(--mgo)}
+.chip{margin-left:auto;font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-bg);
+  padding:3px 8px;border-radius:999px}
+.chip.info{color:var(--mute);background:var(--bar-bg)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.f{min-width:0}
+.f label{display:block;font-size:11px;color:var(--mute);margin-bottom:3px;text-align:center}
+.res{display:flex;align-items:baseline;gap:10px;margin-top:10px;flex-wrap:wrap}
+.vol{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.vol small{font-size:14px;font-weight:600;color:var(--mute)}
+.ton{font-size:18px;font-weight:700;color:var(--ok);font-variant-numeric:tabular-nums;margin-left:auto}
+.meter{height:6px;background:var(--bar-bg);border-radius:6px;margin-top:8px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--bar);width:0}
+.meter.hi i{background:var(--warn)}
+.det{font-size:12px;color:var(--mute);margin-top:6px;font-variant-numeric:tabular-nums}
+.totals{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+.totals .wrap{display:flex;gap:10px;align-items:center;padding:0}
+.tot{flex:1}
+.tot b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+.tot span{font-size:11px;color:var(--mute);font-weight:700}
+.btn{font:inherit;font-weight:700;border:0;border-radius:11px;padding:11px 14px;background:var(--accent);
+  color:var(--accent-ink);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.btn.sm{padding:7px 10px;font-size:13px}
+.btn.danger{background:transparent;color:var(--warn);border:1.5px solid var(--warn)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
+.hist{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.hist summary{padding:10px 12px;cursor:pointer;display:flex;gap:10px;flex-wrap:wrap;list-style:none}
+.hist summary::-webkit-details-marker{display:none}
+.hist summary b{min-width:130px}
+.hist table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.hist td,.hist th{padding:5px 8px;border-top:1px solid var(--line);text-align:right}
+.hist td:first-child,.hist th:first-child{text-align:left}
+.hist .hx{display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--line)}
+.scroll{overflow-x:auto}
+.note{font-size:12.5px;color:var(--mute);margin:14px 0}
+.toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:9px 14px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:.95}
+.status{font-size:12px;color:var(--mute)}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding:0">
+    <h1>Yakıt Sounding</h1>
+    <div class="sub" id="sub"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="bar-top">
+    <div class="trim">
+      <label for="trim">Trim (m)</label>
+      <input id="trim" class="num" inputmode="decimal" autocomplete="off" placeholder="0">
+      <small>kıça trim eksi (−4 … +1)</small>
+    </div>
+  </div>
+
+  <div id="tanks"></div>
+
+  <div class="actions">
+    <button class="btn" id="saveDay">Günü kaydet</button>
+    <button class="btn ghost" id="shareNow">Paylaş (metin)</button>
+    <button class="btn ghost" id="csvNow">CSV</button>
+    <button class="btn danger" id="clearSnd">Soundingleri sil</button>
+  </div>
+
+  <h2>Geçmiş</h2>
+  <div id="history"></div>
+  <div class="actions"><button class="btn ghost sm" id="csvAll">Tüm geçmişi CSV</button>
+    <button class="btn ghost sm" id="backup">Yedek al</button>
+    <label class="btn ghost sm" style="display:inline-block">Yedek yükle<input type="file" id="restore" accept=".json,application/json" hidden></label>
+  </div>
+
+  <p class="note">
+    Hacim, tank tablosundan sounding ve trime göre ara değer (interpolasyon) ile bulunur.
+    VCF: ASTM 54B · GSV = Hacim × VCF · WCF = Yoğunluk − 0,0011 · Ton = GSV × WCF.<br>
+    Tablosu girilmemiş tanklarda hacmi elle yazabilirsin. Veriler sadece bu telefonda saklanır; ara sıra “Yedek al”.
+  </p>
+  <p class="status" id="status"></p>
+</main>
+
+<div class="totals"><div class="wrap">
+  <div class="tot"><span>HFO</span><b id="totHFO">–</b></div>
+  <div class="tot"><span>MGO</span><b id="totMGO">–</b></div>
+  <div class="tot"><span>TOPLAM</span><b id="totALL">–</b></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="tanks.js"></script>
+<script>
+(function(){
+"use strict";
+var D = window.TANK_DATA;
+var KEY = "sounding.state.v1", HKEY = "sounding.history.v1";
+
+function load(k, def){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }catch(e){ return def; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+
+var state = load(KEY, {trim:"", t:{}});
+var history = load(HKEY, []);
+
+function num(s){ if(s===undefined||s===null) return NaN; s=String(s).trim().replace(",","."); if(s==="") return NaN; return Number(s); }
+function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+function r(x,d){ var p=Math.pow(10,d); return Math.round(x*p)/p; }
+function fmt(x,d){ return isFinite(x) ? x.toFixed(d).replace(".", ",") : "–"; }
+
+// Sounding (cm) + trim (m) → hacim (m3), iki yönlü doğrusal ara değer
+function volume(tab, cm, trim){
+  var R = tab.rows, T = tab.trims, n = R.length;
+  var maxCm = R[n-1][0];
+  var c = clamp(cm, R[0][0], maxCm);
+  var i = 0; while(i < n-2 && R[i+1][0] <= c) i++;
+  var fs = (c - R[i][0]) / (R[i+1][0] - R[i][0]);
+  var t = isFinite(trim) ? clamp(trim, T[0], T[T.length-1]) : 0;
+  var k = 0; while(k < T.length-2 && T[k+1] <= t) k++;
+  var ft = (t - T[k]) / (T[k+1] - T[k]);
+  function at(col){ return R[i][col+1] + (R[i+1][col+1] - R[i][col+1]) * fs; }
+  var va = at(k), vb = at(k+1);
+  return {v: va + (vb - va) * ft, over: cm > maxCm, maxCm: maxCm};
+}
+// ASTM 54B VCF (15 °C)
+function vcf(rho15, temp){
+  var p = rho15 * 1000, a;
+  if(p >= 838.3) a = 186.9696/(p*p) + 0.4862/p;
+  else if(p >= 787.5) a = 594.5418/(p*p);
+  else if(p >= 770.4) a = -0.00336312 + 2680.3206/(p*p);
+  else a = 346.4228/(p*p) + 0.4388/p;
+  var dt = temp - 15;
+  return r(Math.exp(-a*dt*(1 + 0.8*a*dt)), 4);
+}
+
+function calc(tank){
+  var s = state.t[tank.name] || {};
+  var tab = D.tables[tank.name];
+  var trim = num(state.trim); if(!isFinite(trim)) trim = 0;
+  var out = {name:tank.name, grade:tank.grade, cap:tank.cap, hasTable:!!tab, snd:num(s.snd), temp:num(s.temp), dens:num(s.dens)};
+  if(tab){
+    if(isFinite(out.snd)){ var q = volume(tab, out.snd, trim); out.vol = r(q.v,2); out.over = q.over; out.maxCm = q.maxCm; }
+  } else {
+    out.vol = num(s.vol);
+  }
+  if(isFinite(out.vol) && isFinite(out.temp) && isFinite(out.dens) && out.dens > 0.6 && out.dens < 1.1){
+    out.vcf = vcf(out.dens, out.temp);
+    out.gsv = r(out.vol*out.vcf, 3);
+    out.wcf = r(out.dens - 0.0011, 4);
+    out.ton = r(out.gsv*out.wcf, 3);
+  }
+  if(isFinite(out.vol) && tank.cap) out.pct = out.vol / tank.cap;
+  return out;
+}
+
+var els = {};
+function build(){
+  var box = document.getElementById("tanks"); box.innerHTML = "";
+  ["HFO","MGO"].forEach(function(g){
+    var list = D.tanks.filter(function(t){ return t.grade===g; });
+    if(!list.length) return;
+    var h = document.createElement("h2"); h.textContent = g === "HFO" ? "HFO – Ağır yakıt" : "MGO – Dizel"; box.appendChild(h);
+    list.forEach(function(t){
+      var has = !!D.tables[t.name];
+      var c = document.createElement("div"); c.className = "card" + (has ? "" : " notable");
+      c.innerHTML =
+        '<div class="row1"><span class="tname"></span><span class="grade '+t.grade+'">'+t.grade+'</span><span class="chip" hidden></span></div>'+
+        '<div class="grid">'+
+          '<div class="f"><label>'+(has ? 'Sounding cm' : 'Hacim m³ (elle)')+'</label><input class="num" data-k="'+(has?'snd':'vol')+'" inputmode="decimal" autocomplete="off"></div>'+
+          '<div class="f"><label>Sıcaklık °C</label><input class="num" data-k="temp" inputmode="decimal" autocomplete="off"></div>'+
+          '<div class="f"><label>Yoğunluk @15</label><input class="num" data-k="dens" inputmode="decimal" autocomplete="off" placeholder="0,8453"></div>'+
+        '</div>'+
+        '<div class="res"><span class="vol">–</span><span class="ton"></span></div>'+
+        '<div class="meter"><i></i></div><div class="det"></div>';
+      c.querySelector(".tname").textContent = t.name;
+      var s = state.t[t.name] || {};
+      c.querySelectorAll("input").forEach(function(inp){
+        var k = inp.getAttribute("data-k");
+        inp.value = s[k] !== undefined ? s[k] : "";
+        inp.addEventListener("input", function(){
+          state.t[t.name] = state.t[t.name] || {};
+          state.t[t.name][k] = inp.value;
+          save(KEY, state); render();
+        });
+      });
+      box.appendChild(c);
+      els[t.name] = c;
+    });
+  });
+}
+
+function render(){
+  var tot = {HFO:0, MGO:0}, any = {HFO:false, MGO:false};
+  D.tanks.forEach(function(t){
+    var o = calc(t), c = els[t.name];
+    var chip = c.querySelector(".chip");
+    var warn = "";
+    if(!o.hasTable) warn = "TABLO YOK";
+    else if(o.over) warn = "MAX ÜSTÜ (" + o.maxCm + " cm)";
+    else if(o.pct > 0.95) warn = "%95 ÜSTÜ";
+    chip.hidden = !warn; chip.textContent = warn; chip.className = "chip" + (o.hasTable ? "" : " info");
+    c.querySelector(".vol").innerHTML = isFinite(o.vol) ? fmt(o.vol,2) + ' <small>m³</small>' : '– <small>m³</small>';
+    c.querySelector(".ton").textContent = isFinite(o.ton) ? fmt(o.ton,3) + " t" : "";
+    var m = c.querySelector(".meter");
+    m.firstChild.style.width = isFinite(o.pct) ? Math.min(100, o.pct*100) + "%" : "0";
+    m.className = "meter" + (o.pct > 0.95 ? " hi" : "");
+    var d = [];
+    if(isFinite(o.pct)) d.push("Doluluk " + fmt(o.pct*100,1) + "% / " + fmt(o.cap,1) + " m³");
+    if(isFinite(o.vcf)) d.push("VCF " + fmt(o.vcf,4) + " · GSV " + fmt(o.gsv,3) + " · WCF " + fmt(o.wcf,4));
+    c.querySelector(".det").textContent = d.join("  ·  ");
+    if(isFinite(o.ton)){ tot[t.grade] += o.ton; any[t.grade] = true; }
+  });
+  document.getElementById("totHFO").textContent = any.HFO ? fmt(tot.HFO,3) + " t" : "–";
+  document.getElementById("totMGO").textContent = any.MGO ? fmt(tot.MGO,3) + " t" : "–";
+  document.getElementById("totALL").textContent = (any.HFO||any.MGO) ? fmt(tot.HFO+tot.MGO,3) + " t" : "–";
+}
+
+function snapshot(){
+  var trim = num(state.trim);
+  return {date: new Date().toISOString(), trim: isFinite(trim) ? trim : 0,
+    rows: D.tanks.map(calc).filter(function(o){ return isFinite(o.vol); })
+      .map(function(o){ return {name:o.name, grade:o.grade, snd:o.snd, vol:o.vol, temp:o.temp, dens:o.dens, vcf:o.vcf, gsv:o.gsv, wcf:o.wcf, ton:o.ton}; })};
+}
+function dstr(iso){ var d = new Date(iso); function p(n){return (n<10?"0":"")+n;}
+  return p(d.getDate())+"."+p(d.getMonth()+1)+"."+d.getFullYear()+" "+p(d.getHours())+":"+p(d.getMinutes()); }
+function totals(s){ var t={HFO:0,MGO:0}; s.rows.forEach(function(x){ if(isFinite(x.ton)) t[x.grade]+=x.ton; }); return t; }
+function v(x,d){ return (x===undefined||x===null||!isFinite(x)) ? "" : fmt(x,d); }
+
+function toText(s){
+  var t = totals(s), L = ["YAKIT SOUNDING " + dstr(s.date) + "  (trim " + fmt(s.trim,2) + " m)"];
+  s.rows.forEach(function(x){
+    L.push(x.name + ": " + (isFinite(x.snd) ? fmt(x.snd,0)+" cm → " : "") + fmt(x.vol,2) + " m³" + (isFinite(x.ton) ? " = " + fmt(x.ton,3) + " t" : ""));
+  });
+  L.push("HFO: " + fmt(t.HFO,3) + " t  |  MGO: " + fmt(t.MGO,3) + " t");
+  return L.join("\n");
+}
+function toCSV(list){
+  var L = ["Tarih;Trim m;Tank;Cins;Sounding cm;Hacim m3;Sicaklik C;Yogunluk 15C;VCF;GSV m3;WCF;Ton"];
+  list.forEach(function(s){ s.rows.forEach(function(x){
+    L.push([dstr(s.date), v(s.trim,2), x.name, x.grade, v(x.snd,0), v(x.vol,2), v(x.temp,1), v(x.dens,4), v(x.vcf,4), v(x.gsv,3), v(x.wcf,4), v(x.ton,3)].join(";"));
+  }); });
+  return "﻿" + L.join("\r\n");
+}
+function shareFile(name, text, type){
+  var blob = new Blob([text], {type:type});
+  try{
+    var f = new File([blob], name, {type:type});
+    if(navigator.canShare && navigator.canShare({files:[f]})){ navigator.share({files:[f], title:name}).catch(function(){}); return; }
+  }catch(e){}
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function shareText(text){
+  if(navigator.share){ navigator.share({text:text}).catch(function(){}); return; }
+  try{ navigator.clipboard.writeText(text); toast("Panoya kopyalandı"); }catch(e){ alert(text); }
+}
+function toast(msg){ var t=document.getElementById("toast"); t.textContent=msg; t.className="toast on"; setTimeout(function(){ t.className="toast"; },1600); }
+
+function renderHistory(){
+  var box = document.getElementById("history"); box.innerHTML = "";
+  if(!history.length){ box.innerHTML = '<p class="note">Henüz kayıt yok. Ölçümleri girince “Günü kaydet”e bas.</p>'; return; }
+  history.slice().reverse().forEach(function(s){
+    var t = totals(s), d = document.createElement("details"); d.className = "hist";
+    var rows = s.rows.map(function(x){ return "<tr><td>"+esc(x.name)+"</td><td>"+v(x.snd,0)+"</td><td>"+v(x.vol,2)+"</td><td>"+v(x.ton,3)+"</td></tr>"; }).join("");
+    d.innerHTML = "<summary><b>"+dstr(s.date)+"</b><span>HFO "+fmt(t.HFO,3)+" t</span><span>MGO "+fmt(t.MGO,3)+" t</span></summary>"+
+      '<div class="scroll"><table><tr><th>Tank</th><th>cm</th><th>m³</th><th>ton</th></tr>'+rows+"</table></div>"+
+      '<div class="hx"><button class="btn ghost sm" data-a="share">Paylaş</button><button class="btn danger sm" data-a="del">Sil</button></div>';
+    d.querySelector('[data-a="share"]').onclick = function(){ shareText(toText(s)); };
+    d.querySelector('[data-a="del"]').onclick = function(){
+      if(!confirm(dstr(s.date) + " kaydı silinsin mi?")) return;
+      history = history.filter(function(h){ return h !== s; }); save(HKEY, history); renderHistory();
+    };
+    box.appendChild(d);
+  });
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+// olaylar
+var trimEl = document.getElementById("trim");
+trimEl.value = state.trim || "";
+trimEl.addEventListener("input", function(){ state.trim = trimEl.value; save(KEY, state); render(); });
+document.getElementById("saveDay").onclick = function(){
+  var s = snapshot(); if(!s.rows.length){ toast("Önce sounding gir"); return; }
+  history.push(s); if(!save(HKEY, history)) alert("Kaydedilemedi (tarayıcı hafızası kapalı olabilir).");
+  renderHistory(); toast("Kaydedildi");
+};
+document.getElementById("shareNow").onclick = function(){ var s=snapshot(); if(!s.rows.length){ toast("Önce sounding gir"); return; } shareText(toText(s)); };
+document.getElementById("csvNow").onclick = function(){ var s=snapshot(); if(!s.rows.length){ toast("Önce sounding gir"); return; } shareFile("sounding_"+dstr(s.date).slice(0,10)+".csv", toCSV([s]), "text/csv"); };
+document.getElementById("csvAll").onclick = function(){ if(!history.length){ toast("Geçmiş boş"); return; } shareFile("sounding_gecmis.csv", toCSV(history), "text/csv"); };
+document.getElementById("clearSnd").onclick = function(){
+  if(!confirm("Tüm sounding/hacim değerleri silinsin mi? (Sıcaklık ve yoğunluk kalır)")) return;
+  Object.keys(state.t).forEach(function(k){ delete state.t[k].snd; delete state.t[k].vol; });
+  save(KEY, state); build(); render();
+};
+document.getElementById("backup").onclick = function(){
+  shareFile("sounding_yedek.json", JSON.stringify({state:state, history:history}), "application/json");
+};
+document.getElementById("restore").onchange = function(e){
+  var f = e.target.files[0]; if(!f) return;
+  var rd = new FileReader(); rd.onload = function(){
+    try{ var j = JSON.parse(rd.result); if(!j.history || !j.state) throw 0;
+      if(!confirm("Yedek yüklensin mi? Mevcut veriler değişecek.")) return;
+      state = j.state; history = j.history; save(KEY, state); save(HKEY, history);
+      trimEl.value = state.trim || ""; build(); render(); renderHistory(); toast("Yedek yüklendi");
+    }catch(x){ alert("Geçersiz yedek dosyası"); }
+  }; rd.readAsText(f); e.target.value = "";
+};
+
+var nTab = Object.keys(D.tables).length;
+document.getElementById("sub").textContent = nTab + " / " + D.tanks.length + " tankın tablosu yüklü · veri " + D.version;
+build(); render(); renderHistory();
+
+// offline
+var st = document.getElementById("status");
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").then(function(){
+    st.textContent = "Offline kullanıma hazır.";
+  }).catch(function(){ st.textContent = "Offline önbellek kurulamadı."; });
+  var hadCtl = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", function(){ if(hadCtl) st.textContent = "Yeni sürüm yüklendi – uygulamayı kapatıp açınca geçerli."; });
+}
+})();
+</script>
+</body>
+</html>
